@@ -1,0 +1,17 @@
+# Node.js (Backend & Frontend)
+node_modules/
+.env
+
+# Python (ML Service)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Large Datasets & Models (Important for your data folder)
+*.csv
+*.pkl
+*.h5
+
+# OS generated files
+.DS_Store

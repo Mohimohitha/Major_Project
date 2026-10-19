@@ -1,0 +1,52 @@
+{
+  "model_name": "drug_xgboost",
+  "features": [
+    "Age",
+    "Sex",
+    "Disease"
+  ],
+  "target": "Drug",
+  "classes": [
+    "(VER-Cure",
+    "ALLE-Cure",
+    "ARTH-Cure",
+    "BRON-Cure",
+    "CERV-Cure",
+    "CHIC-Cure",
+    "CHRO-Cure",
+    "DENG-Cure",
+    "DIAB-Cure",
+    "DIMO-Cure",
+    "DRUG-Cure",
+    "FUNG-Cure",
+    "GAST-Cure",
+    "GERD-Cure",
+    "HEAR-Cure",
+    "HEPA-Cure",
+    "HYPE-Cure",
+    "HYPO-Cure",
+    "JAUN-Cure",
+    "MALA-Cure",
+    "MIGR-Cure",
+    "OSTE-Cure",
+    "PARA-Cure",
+    "PEPT-Cure",
+    "PNEU-Cure",
+    "PSOR-Cure",
+    "TUBE-Cure",
+    "URIN-Cure"
+  ],
+  "numeric_features": [
+    "Age"
+  ],
+  "categorical_features": [
+    "Sex",
+    "Disease"
+  ],
+  "defaults": {
+    "Age": 47.5,
+    "Sex": "M",
+    "Disease": "(VERTIGO) PAROYMSAL  POSITIONAL VERTIGO"
+  },
+  "notes": "Predicts a pharmacological class only. Never a molecule, never a dose. Unseen disease labels are one-hot encoded as all-zero by design."
+}
