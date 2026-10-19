@@ -15,5 +15,3 @@ venv/
 
 # OS generated files
 .DS_Store
-
-git rm -r --cached .vscode
