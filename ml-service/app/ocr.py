@@ -5,6 +5,7 @@ import difflib
 import cv2
 import numpy as np
 import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 from pdf2image import convert_from_path
 
 # ---------------- Configuration ----------------
@@ -22,10 +23,11 @@ GEN_KWARGS        = dict(max_length=64, num_beams=4, no_repeat_ngram_size=3, ear
 # ---------------- Computer Vision & OCR ----------------
 def load_pages(path):
     if path.lower().endswith(".pdf"):
-        pil_pages = convert_from_path(path, dpi=PDF_DPI, first_page=1, last_page=MAX_PDF_PAGES)
+        pil_pages = convert_from_path(path, poppler_path=r'C:\poppler\Library\bin')
         if not pil_pages:
             raise ValueError(f"PDF has no pages: {path}")
         return [cv2.cvtColor(np.array(p.convert("RGB")), cv2.COLOR_RGB2BGR) for p in pil_pages]
+    
     img = cv2.imread(path)
     if img is None:
         raise FileNotFoundError(f"Cannot read image: {path}")
