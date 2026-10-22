@@ -1,15 +1,20 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, Lock, Activity, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Mail, Activity, ShieldCheck, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false
   });
 
+  // UI States
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -17,12 +22,34 @@ const Login = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Clear error when user starts typing again
+    if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login Data:', formData);
-    // Future: Authenticate with FastAPI backend
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Point this to your Node.js backend port
+      const response = await axios.post('http://localhost:5000/api/auth/login', {
+        email: formData.email,
+        password: formData.password
+      });
+      
+      // Store the JWT token in localStorage for subsequent authenticated requests
+      localStorage.setItem('labparse_token', response.data.token);
+      
+      // Redirect to the dashboard upon successful login
+      navigate('/dashboard');
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Invalid credentials. Please check your email and password."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -85,6 +112,14 @@ const Login = () => {
             <p className="text-gray-500 text-sm">Access certified lab telemetry and therapeutic monitoring.</p>
           </div>
 
+          {/* Error Message Display */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-start text-sm">
+              <AlertCircle size={18} className="mr-2 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* Email / Medical ID */}
@@ -99,6 +134,7 @@ const Login = () => {
                 <input 
                   type="email" name="email" required
                   placeholder="patient@labparse.org"
+                  value={formData.email}
                   onChange={handleChange}
                   className="w-full h-full pl-4 pr-10 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors"
                 />
@@ -120,6 +156,7 @@ const Login = () => {
                   type={showPassword ? "text" : "password"} 
                   name="password" required 
                   placeholder="••••••••••••"
+                  value={formData.password}
                   onChange={handleChange}
                   className="w-full h-full pl-4 pr-10 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors"
                 />
@@ -137,6 +174,7 @@ const Login = () => {
             <div className="flex items-center space-x-3">
               <input 
                 type="checkbox" name="rememberMe" id="remember"
+                checked={formData.rememberMe}
                 onChange={handleChange}
                 className="w-4 h-4 text-amber-500 border-gray-300 rounded focus:ring-amber-500 cursor-pointer"
               />
@@ -147,10 +185,15 @@ const Login = () => {
 
             {/* Submit Button */}
             <button 
-              type="submit" 
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-amber-500/30 transition-colors mt-4"
+              type="submit"
+              disabled={isLoading}
+              className={`w-full font-bold py-4 rounded-lg shadow-lg transition-colors mt-4 flex items-center justify-center ${
+                isLoading 
+                  ? 'bg-amber-400 cursor-not-allowed text-amber-50 shadow-none' 
+                  : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/30'
+              }`}
             >
-              Sign In to Workstation →
+              {isLoading ? 'Authenticating...' : 'Sign In to Workstation →'}
             </button>
           </form>
 

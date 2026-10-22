@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { User, Mail, Activity, ShieldCheck, ArrowLeft, Calendar, Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { User, Mail, Activity, ShieldCheck, ArrowLeft, Calendar, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 const Register = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -13,9 +15,11 @@ const Register = () => {
     agreed: false
   });
 
-  // Password visibility states
+  // UI States
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -23,12 +27,42 @@ const Register = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Clear error when user starts typing again
+    if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Registration Data:', formData);
-    // Future: Add form validation here (e.g. password match check) before sending to backend
+    
+    // Front-end validation
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match. Please verify.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Point this to your Node.js backend port (adjust 5000 if needed)
+      await axios.post('http://localhost:5000/api/auth/register', {
+        fullName: formData.fullName,
+        email: formData.email,
+        sex: formData.sex,
+        dob: formData.dob,
+        password: formData.password,
+        agreed: formData.agreed
+      });
+      
+      // On success, redirect to login page
+      navigate('/login');
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Registration failed. Please check your connection and try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,6 +123,14 @@ const Register = () => {
             <h2 className="text-3xl font-bold text-gray-900 mb-3">Create Your Account</h2>
             <p className="text-gray-500 text-sm">Secure intake portal for personalized diagnostic telemetry.</p>
           </div>
+
+          {/* Error Message Display */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-start text-sm">
+              <AlertCircle size={18} className="mr-2 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             
@@ -228,10 +270,15 @@ const Register = () => {
 
             {/* Submit Button */}
             <button 
-              type="submit" 
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-amber-500/30 transition-colors mt-6"
+              type="submit"
+              disabled={isLoading}
+              className={`w-full font-bold py-4 rounded-lg shadow-lg transition-colors mt-6 flex items-center justify-center ${
+                isLoading 
+                  ? 'bg-amber-400 cursor-not-allowed text-amber-50 shadow-none' 
+                  : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/30'
+              }`}
             >
-              Create Account
+              {isLoading ? 'Processing Registration...' : 'Create Account'}
             </button>
           </form>
 

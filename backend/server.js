@@ -2,12 +2,6 @@
  * server.js
  * ---------
  * Express entry point. Start with: npm run dev
- *
- * Responsibilities kept here rather than in a route file:
- *   - database connection and its failure behaviour
- *   - security middleware (helmet, CORS allow-list, rate limiting)
- *   - authentication endpoints
- *   - one central error handler, so no route leaks a stack trace
  */
 
 require('dotenv').config();
@@ -37,7 +31,6 @@ app.use(
 );
 
 // Uploads are expensive (OCR + three models), so they get a tighter budget
-// than ordinary reads.
 const uploadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 
@@ -50,24 +43,27 @@ function signToken(user) {
 /* ---------------------------- auth ---------------------------------- */
 app.post('/api/auth/register', authLimiter, async (req, res, next) => {
   try {
-    const { fullName, email, password, gender, dateOfBirth, consent } = req.body;
-    if (!fullName || !email || !password || !gender) {
-      return res.status(400).json({ error: 'Name, email, password and gender are required.' });
+    // Mapped to match frontend payload: sex, dob, agreed
+    const { fullName, email, password, sex, dob, agreed } = req.body;
+    
+    if (!fullName || !email || !password || !sex) {
+      return res.status(400).json({ message: 'Name, email, password and sex are required.' });
     }
     if (String(password).length < 8) {
-      return res.status(400).json({ error: 'Use a password of at least 8 characters.' });
+      return res.status(400).json({ message: 'Use a password of at least 8 characters.' });
     }
     if (await User.exists({ email: String(email).toLowerCase() })) {
-      return res.status(409).json({ error: 'An account with that email already exists.' });
+      return res.status(409).json({ message: 'An account with that email already exists.' });
     }
 
     const user = new User({
       fullName,
       email,
-      gender,
-      dateOfBirth,
-      consent: consent ? { dataProcessing: true, grantedAt: new Date() } : undefined,
+      gender: sex, // Map frontend 'sex' to backend 'gender'
+      dateOfBirth: dob, // Map frontend 'dob' to backend 'dateOfBirth'
+      consent: agreed ? { dataProcessing: true, grantedAt: new Date() } : undefined,
     });
+    
     await user.setPassword(password);
     await user.save();
 
@@ -83,10 +79,10 @@ app.post('/api/auth/login', authLimiter, async (req, res, next) => {
     const user = await User.findOne({ email: String(email || '').toLowerCase() }).select(
       '+passwordHash'
     );
-    // Same message for both failure modes, so the endpoint cannot be used to
-    // enumerate which emails have accounts.
+    
+    // Unified error message
     if (!user || !(await user.verifyPassword(password || ''))) {
-      return res.status(401).json({ error: 'Email or password is incorrect.' });
+      return res.status(401).json({ message: 'Email or password is incorrect.' });
     }
 
     user.lastLoginAt = new Date();
@@ -107,25 +103,24 @@ app.get('/api/health', (_req, res) =>
 );
 
 /* ------------------------- error handling --------------------------- */
-app.use((_req, res) => res.status(404).json({ error: 'That endpoint does not exist.' }));
+app.use((_req, res) => res.status(404).json({ message: 'That endpoint does not exist.' }));
 
-// eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
   if (err instanceof multer.MulterError) {
     const message =
       err.code === 'LIMIT_FILE_SIZE'
         ? 'That file is larger than 10 MB. Compress it or upload a single page.'
         : 'The file could not be read.';
-    return res.status(400).json({ error: message });
+    return res.status(400).json({ message });
   }
   if (err.name === 'ValidationError') {
     return res.status(400).json({
-      error: Object.values(err.errors).map((e) => e.message).join(' '),
+      message: Object.values(err.errors).map((e) => e.message).join(' '),
     });
   }
 
   console.error('[unhandled]', err);
-  return res.status(500).json({ error: 'Something went wrong on our side.' });
+  return res.status(500).json({ message: 'Something went wrong on our side.' });
 });
 
 /* ----------------------------- boot --------------------------------- */
@@ -135,8 +130,6 @@ async function start() {
     console.log('MongoDB connected');
     app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
   } catch (err) {
-    // Starting without a database would mean every upload fails after the
-    // expensive ML call, so refuse to start at all.
     console.error('Could not connect to MongoDB:', err.message);
     process.exit(1);
   }
@@ -144,4 +137,4 @@ async function start() {
 
 start();
 
-module.exports = app; // exported for supertest
+module.exports = app;
